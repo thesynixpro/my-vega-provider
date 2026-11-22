@@ -47,6 +47,14 @@ All public entry points import Vega types from `../types` and use only the injec
 `providerContext`. No third-party libraries are imported into provider code; shared
 modules (`config.ts`, `api.ts`) are inlined by esbuild during bundling.
 
+## Documentation
+
+- `docs/xhamster-api-analysis.md` — analysis of the extracted Python source
+  (`unofficial-api-for-xhamster` v3.0.0): capabilities, data model, dependencies.
+- `docs/license-review.md` — AGPL-3.0 license findings and derivative-work assessment.
+- `docs/python-integration.md` — design of the separate authorized HTTP service.
+- `docs/provider-drm.md` — Vega DRM stream reference (from the template).
+
 ## Implemented Features
 
 - Provider registration in `manifest.json` (global, `hasSettings: true`, enabled).
@@ -78,6 +86,15 @@ documentation and authorized access:
 - Quality selection from real manifest data.
 - DRM-aware playback sources.
 - Any download sources (downloads are intentionally always empty).
+
+The extracted `unofficial-api-for-xhamster` Python project was analyzed
+(`docs/xhamster-api-analysis.md`) and informed the adapter contract, but it is an
+**unofficial scraper** (browser impersonation, page scraping, HLS downloader).
+It is **not** wired into the provider: doing so would bypass xHamster's
+anti-bot/access controls and violate the "authorized streaming only" mission, and
+its AGPL-3.0 license carries source-distribution obligations for any hosted
+service (`docs/license-review.md`). The authorized-backend design is documented
+in `docs/python-integration.md`.
 
 ## Installation
 
@@ -133,12 +150,52 @@ In the Vega App, open **Provider Settings** for xHamster:
 |---|---|---|
 | Preferred Playback Quality | select | Default resolution when multiple are available |
 | Auto Quality Selection | toggle | Pick the best quality automatically |
-| Official API Base URL | text | Base URL of the official xHamster API |
-| Official API Key | text | API key/token issued by xHamster |
-| Request Timeout (seconds) | number | Max wait for official API responses |
-| Include Officially Licensed (DRM) Sources | toggle | Allow DRM sources from the official API |
+| Authorized Backend Base URL | text | Base URL of the authorized backend service |
+| Authorized Backend API Key | text | Access token issued by the authorized backend |
+| Request Timeout (seconds) | number | Max wait for authorized backend responses |
+| Include Officially Licensed (DRM) Sources | toggle | Allow DRM sources from the authorized API |
 
 Values are persisted per-provider in `providerContext.kvStore` and read at runtime.
+
+## Python API Analysis & License
+
+The project directory contains the extracted Python source
+`api/unofficial-api-for-xhamster-main/` (**v3.0.0**, AGPL-3.0-only). It was
+analyzed as read-only reference material; **no code was copied from it**.
+
+Key findings (`docs/xhamster-api-analysis.md`):
+
+- An async library/CLI scraping xhamster.com (browser impersonation via
+  `curl_cffi`, HTML parsing, HLS downloader, login, caching). It exposes no HTTP
+  service of its own.
+- Rich video data model (title, description, duration, views, ratings,
+  uploader, categories, tags, thumbnails, `max_resolution`, `is_hd`/`is_vr`,
+  `m3u8_base_url`) that grounds the provider's documented adapter contract in
+  `providers/xhamster/api.ts`.
+- Because it is an **unofficial scraper**, it is not used as the live backend.
+  Real listings/metadata/streaming stay disabled until official authorization.
+
+License findings (`docs/license-review.md`):
+
+- The TypeScript provider does not incorporate, link, or copy the AGPL code, so
+  this repository does not become a derivative work and stays under the Vega
+  template's ISC license. Attribution is preserved in the docs.
+- Any **separately deployed service** that uses the Python library is a covered
+  work: it must be AGPL-3.0, ship its source (AGPL §13 network clause), and keep
+  notices intact.
+
+## Python Integration (Design)
+
+Because Vega providers run sandboxed JS, integrating the Python library requires
+a **separately deployed HTTP service**. The full contract — endpoints, response
+schemas, errors, auth, security requirements, and deployment steps — is designed
+in `docs/python-integration.md`.
+
+- Vega provider → HTTPS → authorized backend service → future official API.
+- The provider holds only the service token (`apiKey`); library credentials stay
+  in service environment variables.
+- **Status: design only.** No service is deployed and playback remains disabled
+  until xHamster authorization and the AGPL legal review are complete.
 
 ## Required Official API Credentials
 
@@ -170,4 +227,11 @@ playback, this provider must not be considered operational.
 
 ## License
 
-The provider template is provided under the ISC license (see `package.json`).
+- The Vega provider template is provided under the ISC license (see
+  `package.json`).
+- The analyzed `unofficial-api-for-xhamster` Python project is
+  **AGPL-3.0-only** (author: Johannes Habel). No code from it is included in
+  this repository; its analysis and attribution are documented in
+  `docs/xhamster-api-analysis.md` and `docs/license-review.md`.
+- Any future service deploying that Python library must comply with AGPL-3.0
+  (source distribution for network users).

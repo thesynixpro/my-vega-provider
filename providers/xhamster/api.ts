@@ -7,18 +7,76 @@ export interface ApiRequestOptions {
 }
 
 /**
- * Official xHamster API adapter contract.
+ * Documented response shape of the authorized integration service.
+ *
+ * Grounded in the real data model of the analyzed Python project
+ * (`unofficial-api-for-xhamster` v3.0.0, `Video` dataclass) and in the
+ * service contract in docs/python-integration.md. Every field here is one the
+ * analyzed source can actually produce. Nothing is invented.
+ */
+export interface BackendVideo {
+  url: string;
+  video_id: number | null;
+  video_hash: string | null;
+  title: string | null;
+  description: string | null;
+  duration: number | null;
+  views: number | null;
+  comments_count: number | null;
+  created_timestamp: string | number | null;
+  date_ago: string | null;
+  rating_percentage: number | null;
+  likes: number | null;
+  dislikes: number | null;
+  is_vr: boolean | null;
+  is_hd: boolean | null;
+  max_resolution: string | null;
+  orientation: string | null;
+  uploader_name: string | null;
+  uploader_subscribers: number | null;
+  categories: string[] | null;
+  tags: string[] | null;
+  pornstars: string[] | null;
+  thumbnail: string | null;
+  preview_thumbnail: string | null;
+  m3u8_base_url: string | null;
+}
+
+export interface BackendListResponse {
+  items: BackendVideo[];
+  page: number;
+  page_size: number;
+  has_more: boolean;
+}
+
+export interface BackendStreamSource {
+  server: string;
+  link: string;
+  type: "hls" | "mp4";
+  quality?: string;
+  headers?: Record<string, string>;
+}
+
+export interface BackendErrorResponse {
+  error: string;
+  message: string;
+}
+
+/**
+ * Authorized integration-service adapter contract.
  *
  * xHamster and the Vega owner have held discussions, but the official API and
  * playback specifications have NOT been supplied yet. Verbal discussions are
- * not treated as technical API authorization.
+ * not treated as technical API authorization. Until a real, authorized backend
+ * exists (see docs/python-integration.md), no method is wired: the provider
+ * never fabricates API endpoints, stream URLs, or mock playback data, and never
+ * bypasses access controls, DRM, anti-bot protection, or rate limits.
  *
- * When the official documentation arrives, implement each method using the
- * injected `providerContext.axios` and `providerContext.commonHeaders`,
- * keeping config validation and settings in ./config. Until then every method
- * stays a placeholder that fails loudly: the provider never fabricates API
- * endpoints, stream URLs, or mock playback data, and never bypasses access
- * controls or DRM.
+ * When an authorized backend exists, implement each method with the injected
+ * `providerContext.axios` against `settings.apiBaseUrl`, authenticating with
+ * `settings.apiKey`, mapping `BackendVideo` → `Post`/`Info` and
+ * `BackendStreamSource` → `Stream`. Config validation and settings live in
+ * ./config.
  */
 export interface XhamsterApiAdapter {
   getPopularVideos(page: number, options?: ApiRequestOptions): Promise<Post[]>;
@@ -30,8 +88,9 @@ export interface XhamsterApiAdapter {
 }
 
 /**
- * Thrown by every feature that depends on the official API until xHamster
- * supplies its API/playback documentation and authorized integration is built.
+ * Thrown by every feature that depends on the authorized integration backend
+ * until xHamster supplies its API/playback documentation and the authorized
+ * service is deployed and tested.
  */
 export function apiNotAvailable(feature: string): never {
   throw new Error(

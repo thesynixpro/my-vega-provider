@@ -30,16 +30,17 @@ export const getSettingsSchema = async function ({
     {
       key: "apiBaseUrl",
       type: "text",
-      label: "Official API Base URL",
-      description: "Base URL of the official xHamster API provided after API authorization",
-      placeholder: "https://api.xhamster.com",
+      label: "Authorized Backend Base URL",
+      description:
+        "Base URL of the authorized backend service (official xHamster API or the self-hosted integration service) provided after API authorization",
+      placeholder: "https://backend.example.com/api",
       defaultValue: "",
     },
     {
       key: "apiKey",
       type: "text",
-      label: "Official API Key",
-      description: "API key / token issued by xHamster for authorized access",
+      label: "Authorized Backend API Key",
+      description: "Access token issued by the authorized backend service",
       placeholder: "xxxx-xxxx-xxxx-xxxx",
       defaultValue: "",
     },
