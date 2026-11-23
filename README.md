@@ -1,6 +1,6 @@
 # my-vega-provider
 
-A Vega App provider pack with seven adult video providers:
+A Vega App provider pack with ten providers (seven existing video providers and three Hindi-anime catalogue providers):
 
 | Provider | ID | Site | Type |
 | --- | --- | --- | --- |
@@ -11,6 +11,9 @@ A Vega App provider pack with seven adult video providers:
 | Hanime | `hanime` | `hanime.tv` | hentai (SSR + guest index) |
 | HentaiHeaven | `hentaiheaven` | `hentaihaven.xxx` | hentai (Next.js + CMS API) |
 | CosXplay | `cosxplay` | `cosxplay.com` | cosplay tube |
+| AnimeDubHindi | `animedubhindi` | `animedubhindi.link` | Hindi-dubbed anime catalogue | 
+| AnimeHindiDub | `animehindidub` | `animehindidub.com` | Hindi-dubbed anime catalogue | 
+| DesiDubAnime | `desidubanime` | `desidubanime.me` | multilingual anime catalogue |
 
 Each provider is a plain scraper module consumed by the Vega App sandbox. It
 only uses the injected `providerContext` (`axios`, `cheerio`, `kvStore`) — no
@@ -33,8 +36,7 @@ tests/           CLI + offline unit tests
 manifest.json    provider registry (value + version must match the build stamp)
 ```
 
-`common.ts` is a private helper module. esbuild bundles it into `posts.js`,
-`meta.js` and `stream.js`, so it never becomes a runtime import.
+`common.ts` is a private helper module. The build bundles it into provider modules, so it never becomes a runtime import.
 
 ## Manifest
 
@@ -51,8 +53,7 @@ otherwise `npm run build` throws.
 
 ## Building
 
-The `dist/` folder in this repo was produced by hand because the authoring
-device has no Node/JS toolchain. Regenerate it on a machine with Node.js 20+:
+Regenerate the canonical `dist/` output on a machine with Node.js 20+:
 
 ```bash
 npm install
@@ -64,14 +65,6 @@ npm run build:dev    # readable, no minification
 APK build fails, run the build first — the app reads `dist/<id>/*.js`, not the
 TypeScript sources.
 
-> **Note on this repo's `dist/`:** `dist/<id>/*.js` and `dist/headers.js` were
-> written by hand on a device with no JS toolchain. They follow the build output
-> contract (vega stamp + `"use strict"` + direct `exports.<name>`) but are plain
-> rather than byte-identical esbuild/minified output. `dist/providerContext.js`
-> is the committed generated bundle and `providers/providerContext.ts` is
-> unchanged from the framework, so the two stay consistent. Run
-> `npm install && npm run build` on a Node.js 20+ machine to regenerate all of
-> `dist/` from the TypeScript sources and confirm the output.
 
 ## Testing
 
@@ -83,9 +76,8 @@ npm test                                # every provider end to end
 ```
 
 `npm run test:unit` runs `tests/providers.test.js`, which replays small
-hand-trimmed HTML/JSON fixtures through a stubbed `axios.get` for all seven
-providers (URL shapes, listing parsing, stream resolution, meta extraction and
-the `dist/` contract). The end-to-end tests hit the real sites and need network
+hand-trimmed HTML/JSON fixtures through a stubbed `axios.get` for the existing
+providers and checks the `dist/` contract for all ten providers. The end-to-end tests hit the real sites and need network
 access.
 
 ## Settings
@@ -143,6 +135,15 @@ to the built-in domain.
 When a site is blocked, unreachable, or changes markup, `getStream` returns a
 `type: "webview"` entry pointing at the original page rather than inventing a
 URL.
+
+
+## Hindi-anime providers
+
+- **AnimeDubHindi** — `https://www.animedubhindi.link`; generic article/card parsing for latest and category pages, search via the site's WordPress-style `?s=` route, Open Graph detail metadata, and original-page WebView playback.
+- **AnimeHindiDub** — `https://animehindidub.com`; includes Hindi Dub and Anime Times catalog routes, search, poster/detail metadata, and source-page WebView playback.
+- **DesiDubAnime** — `https://www.desidubanime.me`; includes `/anime/` and `/anime_attribute/hindi-dub/` catalog routes, search, detail metadata, and source-page WebView playback.
+
+These providers open the original source page in the app's WebView; they do not extract third-party file-host URLs or bypass protected players. Site markup and anti-bot rules can change, so live availability may vary.
 
 ## Site limitations
 

@@ -61,5 +61,32 @@
     "type": "global",
     "hasSettings": true,
     "disabled": false
+  },
+  {
+    "display_name": "AnimeDubHindi",
+    "value": "animedubhindi",
+    "version": "1.0.0",
+    "icon": "",
+    "type": "global",
+    "hasSettings": true,
+    "disabled": false
+  },
+  {
+    "display_name": "AnimeHindiDub",
+    "value": "animehindidub",
+    "version": "1.0.0",
+    "icon": "",
+    "type": "global",
+    "hasSettings": true,
+    "disabled": false
+  },
+  {
+    "display_name": "DesiDubAnime",
+    "value": "desidubanime",
+    "version": "1.0.0",
+    "icon": "",
+    "type": "global",
+    "hasSettings": true,
+    "disabled": false
   }
 ]

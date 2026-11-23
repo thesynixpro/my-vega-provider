@@ -1,5 +1,5 @@
 // Offline unit tests for the xnxx / xvideos / eporner / pornhub / hanime /
-// hentaiheaven / cosxplay providers.
+// hentaiheaven / cosxplay providers plus the three Hindi-anime provider contracts.
 //
 // These tests never touch the network: every request goes through a stubbed
 // `axios.get` that replays small HTML/JSON fixtures shaped like the real pages.
@@ -202,7 +202,7 @@ function expectedCalcHash(hex) {
 // --- dist contract --------------------------------------------------------
 
 test("dist contains the required provider modules and exports", () => {
-  for (const id of ["xnxx", "xvideos", "eporner", "pornhub", "hanime", "hentaiheaven", "cosxplay"]) {
+  for (const id of ["xnxx", "xvideos", "eporner", "pornhub", "hanime", "hentaiheaven", "cosxplay", "animedubhindi", "animehindidub", "desidubanime"]) {
     for (const module of ["catalog", "posts", "meta", "stream", "settings"]) {
       assert.ok(
         fs.existsSync(distPath(id, module)),
@@ -221,7 +221,7 @@ test("dist contains the required provider modules and exports", () => {
 });
 
 test("built files carry the vega provider stamp", () => {
-  for (const id of ["xnxx", "xvideos", "eporner", "pornhub", "hanime", "hentaiheaven", "cosxplay"]) {
+  for (const id of ["xnxx", "xvideos", "eporner", "pornhub", "hanime", "hentaiheaven", "cosxplay", "animedubhindi", "animehindidub", "desidubanime"]) {
     const head = fs.readFileSync(distPath(id, "posts.js"), "utf8").split("\n", 2);
     assert.equal(head[0], `// @vega-provider ${id}`);
     assert.equal(head[1], "// @vega-version 1.0.0");
@@ -229,7 +229,7 @@ test("built files carry the vega provider stamp", () => {
 });
 
 test("settings schemas expose the documented keys", async () => {
-  for (const id of ["xnxx", "xvideos", "eporner", "pornhub", "hanime", "hentaiheaven", "cosxplay"]) {
+  for (const id of ["xnxx", "xvideos", "eporner", "pornhub", "hanime", "hentaiheaven", "cosxplay", "animedubhindi", "animehindidub", "desidubanime"]) {
     const schema = await loadDist(id, "settings").getSettingsSchema({
       providerContext: {},
     });
