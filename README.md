@@ -1,237 +1,123 @@
-# xHamster Vega Provider
+# my-vega-provider
 
-A custom [Vega App](https://github.com/Zenda-Cross/vega) provider extension for **xHamster**
-(`https://xhamster.com`), built on the official Vega Provider Template.
+A Vega App provider pack with three adult-tube providers:
 
-**Provider type:** Global
-**Provider ID:** `xhamster`
-**Version:** `1.0`
+| Provider | ID | Pages scraped |
+| --- | --- | --- |
+| XNXX | `xnxx` | `www.xnxx.com` |
+| XVideos | `xvideos` | `www.xvideos.com` |
+| Eporner | `eporner` | `www.eporner.com` |
 
-> ⚠️ **Status: awaiting official API authorization.**
-> The xHamster site owner and the Vega owner have held discussions, but the official
-> API documentation and playback specifications have **not** been supplied yet.
-> Verbal discussions are **not** treated as technical API authorization. This provider
-> is fully buildable and installable, but **streaming is disabled** until an officially
-> authorized playback integration exists and is tested. It never fabricates API
-> endpoints, stream URLs, or mock playback data, and it never bypasses access
-> controls, DRM, or anti-bot protection.
+Each provider is a plain scraper module consumed by the Vega App sandbox. It
+only uses the injected `providerContext` (`axios`, `cheerio`, `kvStore`) — no
+third-party packages and no Node built-ins.
 
----
-
-## Project Overview
-
-This repository builds and publishes a `xhamster` provider for the Vega App. A Vega
-provider is a sandboxed script module that supplies catalog sections, post listings,
-item metadata, and streaming sources. Providers execute inside a strict JS sandbox
-(Web Worker / JavaScriptCore) with only the injected `providerContext` (axios,
-cheerio, common headers, kvStore, openWebView) available.
-
-The reference example provider from the template (`providers/example`) is kept intact
-so the build and test tooling can be verified against a known-good provider.
-
-## Provider Architecture
+## Layout
 
 ```
 providers/
-  xhamster/
-    catalog.ts    Static browse sections and genre filters (adapter tokens)
-    posts.ts      getPosts / getSearchPosts — list & search interfaces
-    meta.ts       getMeta — video metadata & link list
-    stream.ts     getStream — authorized playback resolution (disabled)
-    settings.ts   getSettingsSchema — Vega Provider Settings UI
-    config.ts     Shared settings reader + official-API validation
-    api.ts        Official API adapter contract + placeholder guards
+  <id>/
+    catalog.ts   categories / genres shown in the app
+    posts.ts     listing + search scraping
+    meta.ts      video detail scraping
+    stream.ts    playback resolution (.mp4 / .m3u8)
+    settings.ts  user settings schema
+    common.ts    shared helpers (inlined at build time, NOT a dist module)
+dist/
+  <id>/*.js      build output consumed by the app
+tests/           CLI + integration test runner
+manifest.json    provider registry (value + version must match the build stamp)
 ```
 
-All public entry points import Vega types from `../types` and use only the injected
-`providerContext`. No third-party libraries are imported into provider code; shared
-modules (`config.ts`, `api.ts`) are inlined by esbuild during bundling.
+`common.ts` is a private helper module. esbuild bundles it into `posts.js`,
+`meta.js` and `stream.js`, so it never becomes a runtime import.
 
-## Documentation
+## Manifest
 
-- `docs/xhamster-api-analysis.md` — analysis of the extracted Python source
-  (`unofficial-api-for-xhamster` v3.0.0): capabilities, data model, dependencies.
-- `docs/license-review.md` — AGPL-3.0 license findings and derivative-work assessment.
-- `docs/python-integration.md` — design of the separate authorized HTTP service.
-- `docs/provider-drm.md` — Vega DRM stream reference (from the template).
+`manifest.json` is the source of truth for provider IDs and versions. The build
+stamps every emitted file with:
 
-## Implemented Features
+```
+// @vega-provider <value>
+// @vega-version <version>
+```
 
-- Provider registration in `manifest.json` (global, `hasSettings: true`, enabled).
-- Static catalog of browse sections (Latest, Popular, Top Rated, Trending, HD,
-  Verified Models, Recommended) and ~25 genre filters.
-- Posts and search entry points that validate official API configuration and return
-  an empty list when it is missing — they never emit fabricated content.
-- Metadata entry point that fails with an actionable configuration error when the
-  official API is not configured.
-- Stream entry point that:
-  - Always returns an **empty list for download requests** (`isDownload: true`).
-  - Fails with a clear configuration error for playback when the official API is
-    not configured.
-  - Documents the quality selection, playback headers, and expired-URL handling
-    required once the authorized API spec arrives.
-- Professional settings interface (preferred quality, auto quality, official API
-  base URL + key, request timeout, DRM-source preference).
-- Strict TypeScript (compiles with `tsc --noEmit`), esbuild bundling, and a
-  deterministic unit-test suite.
+Keep `value` identical to the folder name and bump `version` on every change,
+otherwise `npm run build` throws.
 
-## Awaiting Official API Access
+## Building
 
-These features are **disabled** until xHamster supplies official API/playback
-documentation and authorized access:
+The `dist/` folder in this repo was produced by hand because the authoring
+device has no Node/JS toolchain. Regenerate it on a machine with Node.js 20+:
 
-- Real catalog/post/search data.
-- Real video metadata.
-- Authorized HLS/MP4 playback resolution.
-- Quality selection from real manifest data.
-- DRM-aware playback sources.
-- Any download sources (downloads are intentionally always empty).
-
-The extracted `unofficial-api-for-xhamster` Python project was analyzed
-(`docs/xhamster-api-analysis.md`) and informed the adapter contract, but it is an
-**unofficial scraper** (browser impersonation, page scraping, HLS downloader).
-It is **not** wired into the provider: doing so would bypass xHamster's
-anti-bot/access controls and violate the "authorized streaming only" mission, and
-its AGPL-3.0 license carries source-distribution obligations for any hosted
-service (`docs/license-review.md`). The authorized-backend design is documented
-in `docs/python-integration.md`.
-
-## Installation
-
-```sh
+```bash
 npm install
+npm run build        # minified, production
+npm run build:dev    # readable, no minification
 ```
 
-> If you are on a filesystem that does not support symlinks (e.g. Android
-> `/sdcard` FUSE), use `npm install --no-bin-links`. Build and test scripts run
-> through Node module resolution and do not require `.bin` links.
+`npm run build` overwrites `dist/` and is the canonical output. If the requested
+APK build fails, run the build first — the app reads `dist/<id>/*.js`, not the
+TypeScript sources.
 
-## Build
-
-```sh
-npm run build
-```
-
-Bundles every provider under `providers/` into `dist/<provider>/<module>.js` using
-esbuild + terser, and stamps each bundle with its manifest ID/version header.
-Manifest entries are validated before anything is published.
-
-Type-check (no emit):
-
-```sh
-node node_modules/typescript/bin/tsc --noEmit
-```
+> **Note on this repo's `dist/`:** `dist/<id>/*.js` and `dist/headers.js` were
+> written by hand on a device with no JS toolchain. They follow the build output
+> contract (vega stamp + `"use strict"` + direct `exports.<name>`) but are plain
+> rather than byte-identical esbuild/minified output. `dist/providerContext.js`
+> is the committed generated bundle and `providers/providerContext.ts` is
+> unchanged from the framework, so the two stay consistent. Run
+> `npm install && npm run build` on a Node.js 20+ machine to regenerate all of
+> `dist/` from the TypeScript sources and confirm the output.
 
 ## Testing
 
-```sh
-# Deterministic structural tests (manifest schema, empty-list contracts, errors)
-npm run test:unit
-
-# Full integration test of all enabled providers (catalog → posts → meta → stream)
-npm test
-
-# Test a single provider function interactively
-npm run test:provider -- xhamster getStream
+```bash
+npm run test:unit                       # offline unit tests
+npm run test:provider -- xnxx getPosts  # interactive single function
+npm test -- xnxx                        # end-to-end against the live site
+npm test                                # every provider end to end
 ```
 
-**Expected results today:** `npm run test:unit` passes fully. The integration test
-passes for the reference `example` provider. The `xhamster` provider passes its
-catalog step and then stops at posts with the expected result: because the official
-API is not configured, listing returns an empty array and metadata/streaming throw
-clear configuration errors. This is the honest, by-design state until official API
-authorization is available.
+The end-to-end tests hit the real sites and need network access.
 
-## Provider Configuration
+## Settings
 
-In the Vega App, open **Provider Settings** for xHamster:
+Every provider exposes the same settings surface via `settings.ts`:
 
-| Setting | Type | Purpose |
-|---|---|---|
-| Preferred Playback Quality | select | Default resolution when multiple are available |
-| Auto Quality Selection | toggle | Pick the best quality automatically |
-| Authorized Backend Base URL | text | Base URL of the authorized backend service |
-| Authorized Backend API Key | text | Access token issued by the authorized backend |
-| Request Timeout (seconds) | number | Max wait for authorized backend responses |
-| Include Officially Licensed (DRM) Sources | toggle | Allow DRM sources from the authorized API |
+| Key | Type | Purpose |
+| --- | --- | --- |
+| `preferredQuality` | select | Preferred resolution |
+| `allowedResolutions` | multiselect | Filter returned streams |
+| `includeHls` | toggle | Include `.m3u8` streams |
+| `baseUrlOverride` | text | Use a mirror / regional domain |
+| `requestTimeoutSecs` | number | Per-request timeout |
+| `retryAttempts` | number | Retries before failing |
 
-Values are persisted per-provider in `providerContext.kvStore` and read at runtime.
+`baseUrlOverride` only accepts absolute `http(s)` URLs; anything else falls back
+to the built-in domain.
 
-## Python API Analysis & License
+## Scraping notes
 
-The project directory contains the extracted Python source
-`api/unofficial-api-for-xhamster-main/` (**v3.0.0**, AGPL-3.0-only). It was
-analyzed as read-only reference material; **no code was copied from it**.
+- **XNXX** — listings are `div.thumb-block` in the mozaique grid; the player
+  exposes `html5player.setVideoUrlLow/High` and `setVideoHLS`. Signed
+  `secure=<sig>,<expiry>` links are short lived, so `getStream` always refetches
+  the page instead of caching raw URLs.
+- **XVideos** — listings are `div.thumb-block`; the player exposes
+  `setVideoUrlLow/High`, `setVideoHLS` and a JSON-LD `contentUrl`. Category
+  pages paginate as `/c/<Name-ID>/<n>` (n = page − 1), search uses
+  `?k=<q>&p=<page − 1>`.
+- **Eporner** — listings are `.mb` boxes; `getStream` calls the public player
+  endpoint `/xhr/video/<id>?hash=<hash>` and falls back to the `/dload/` MP4
+  links embedded in the page. The page `hash` → base-36 conversion is done in
+  pure JS (`common.ts`).
 
-Key findings (`docs/xhamster-api-analysis.md`):
+When a site is blocked, unreachable, or changes markup, `getStream` returns a
+`type: "webview"` entry pointing at the original page rather than inventing a
+URL.
 
-- An async library/CLI scraping xhamster.com (browser impersonation via
-  `curl_cffi`, HTML parsing, HLS downloader, login, caching). It exposes no HTTP
-  service of its own.
-- Rich video data model (title, description, duration, views, ratings,
-  uploader, categories, tags, thumbnails, `max_resolution`, `is_hd`/`is_vr`,
-  `m3u8_base_url`) that grounds the provider's documented adapter contract in
-  `providers/xhamster/api.ts`.
-- Because it is an **unofficial scraper**, it is not used as the live backend.
-  Real listings/metadata/streaming stay disabled until official authorization.
+## Legal / content notice
 
-License findings (`docs/license-review.md`):
-
-- The TypeScript provider does not incorporate, link, or copy the AGPL code, so
-  this repository does not become a derivative work and stays under the Vega
-  template's ISC license. Attribution is preserved in the docs.
-- Any **separately deployed service** that uses the Python library is a covered
-  work: it must be AGPL-3.0, ship its source (AGPL §13 network clause), and keep
-  notices intact.
-
-## Python Integration (Design)
-
-Because Vega providers run sandboxed JS, integrating the Python library requires
-a **separately deployed HTTP service**. The full contract — endpoints, response
-schemas, errors, auth, security requirements, and deployment steps — is designed
-in `docs/python-integration.md`.
-
-- Vega provider → HTTPS → authorized backend service → future official API.
-- The provider holds only the service token (`apiKey`); library credentials stay
-  in service environment variables.
-- **Status: design only.** No service is deployed and playback remains disabled
-  until xHamster authorization and the AGPL legal review are complete.
-
-## Required Official API Credentials
-
-To enable real features, the following must be obtained from xHamster through the
-ongoing authorization discussions:
-
-1. An **API base URL** (the official endpoint prefix).
-2. An **API key / access token** for authorized requests.
-3. **Playback specification**: HLS/MP4 response format, quality/variant layout,
-   required playback headers, URL expiry/refresh behavior, and DRM/licensing details
-   if applicable.
-
-Until these are supplied and the integration is tested with real authorized
-playback, this provider must not be considered operational.
-
-## Vega Installation
-
-1. Fork or clone this repository and build it (`npm install && npm run build`).
-2. Commit and push the built `dist/` and `manifest.json` to a public GitHub
-   repository (this repository is named `my-vega-provider`).
-3. In the Vega app, open **Settings > Provider Manager > Available Providers** and
-   add a provider source:
-   - If the repository is named exactly `vega-providers`, enter your GitHub username.
-   - Otherwise enter the full repository URL:
-     `https://github.com/<your-username>/my-vega-provider`
-4. Select the added source and install the `xHamster` provider.
-5. The provider appears as **xHamster** (Global, `hasSettings: true`). Configure it
-   via Provider Settings once official API credentials are available.
-
-## License
-
-- The Vega provider template is provided under the ISC license (see
-  `package.json`).
-- The analyzed `unofficial-api-for-xhamster` Python project is
-  **AGPL-3.0-only** (author: Johannes Habel). No code from it is included in
-  this repository; its analysis and attribution are documented in
-  `docs/xhamster-api-analysis.md` and `docs/license-review.md`.
-- Any future service deploying that Python library must comply with AGPL-3.0
-  (source distribution for network users).
+This pack contains scrapers for adult websites and 18+ content. Use it only in
+jurisdictions where such content is legal and only for personal use. Respect
+each site's terms of service, robots directives and copyright. The maintainers
+do not host or redistribute any media.
