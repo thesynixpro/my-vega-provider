@@ -1,12 +1,16 @@
 # my-vega-provider
 
-A Vega App provider pack with three adult-tube providers:
+A Vega App provider pack with seven adult video providers:
 
-| Provider | ID | Pages scraped |
-| --- | --- | --- |
-| XNXX | `xnxx` | `www.xnxx.com` |
-| XVideos | `xvideos` | `www.xvideos.com` |
-| Eporner | `eporner` | `www.eporner.com` |
+| Provider | ID | Site | Type |
+| --- | --- | --- | --- |
+| XNXX | `xnxx` | `www.xnxx.com` | tube |
+| XVideos | `xvideos` | `www.xvideos.com` | tube |
+| Eporner | `eporner` | `www.eporner.com` | tube |
+| Pornhub | `pornhub` | `www.pornhub.com` | tube (webmasters JSON API) |
+| Hanime | `hanime` | `hanime.tv` | hentai (SSR + guest index) |
+| HentaiHeaven | `hentaiheaven` | `hentaihaven.xxx` | hentai (Next.js + CMS API) |
+| CosXplay | `cosxplay` | `cosxplay.com` | cosplay tube |
 
 Each provider is a plain scraper module consumed by the Vega App sandbox. It
 only uses the injected `providerContext` (`axios`, `cheerio`, `kvStore`) — no
@@ -25,7 +29,7 @@ providers/
     common.ts    shared helpers (inlined at build time, NOT a dist module)
 dist/
   <id>/*.js      build output consumed by the app
-tests/           CLI + integration test runner
+tests/           CLI + offline unit tests
 manifest.json    provider registry (value + version must match the build stamp)
 ```
 
@@ -72,13 +76,17 @@ TypeScript sources.
 ## Testing
 
 ```bash
-npm run test:unit                       # offline unit tests
+npm run test:unit                       # offline unit tests (no network)
 npm run test:provider -- xnxx getPosts  # interactive single function
 npm test -- xnxx                        # end-to-end against the live site
 npm test                                # every provider end to end
 ```
 
-The end-to-end tests hit the real sites and need network access.
+`npm run test:unit` runs `tests/providers.test.js`, which replays small
+hand-trimmed HTML/JSON fixtures through a stubbed `axios.get` for all seven
+providers (URL shapes, listing parsing, stream resolution, meta extraction and
+the `dist/` contract). The end-to-end tests hit the real sites and need network
+access.
 
 ## Settings
 
@@ -110,10 +118,50 @@ to the built-in domain.
   endpoint `/xhr/video/<id>?hash=<hash>` and falls back to the `/dload/` MP4
   links embedded in the page. The page `hash` → base-36 conversion is done in
   pure JS (`common.ts`).
+- **Pornhub** — the video grid is rendered client-side, so listings and search
+  use the public webmasters JSON API (`/webmasters/search?…`), which returns
+  `{ videos: [...] }`. Filter values are `ordering:<x>` / `category:<slug>`
+  pairs. Detail pages are server-rendered: `og:title` / `og:image` /
+  `og:description` plus a JSON-LD `VideoObject` give the title, poster, ISO-8601
+  duration and keywords; `og:video` carries a signed progressive MP4.
+- **Hanime** — browse pages (`/browse/trending`, `/browse/tags/<tag>`) are
+  server-rendered; each card links to `/videos/hentai/<slug>`. On-site search is
+  client-side, so `getSearchPosts` pulls the guest catalogue index
+  (`guest.freeanimehentai.net/api/v11/search_hvs`) and filters it locally by
+  name / search titles. Detail pages expose a JSON-LD `VideoObject` plus
+  franchise episode links.
+- **HentaiHeaven** — the `hentaiheaven` provider targets `https://hentaihaven.xxx`.
+  Browse/trending/series pages are server-rendered (Next.js); search uses the
+  WordPress content API (`cms.hentaihaven.xxx/wp-json/wp/v2/wp-manga`). Watch
+  pages list `/watch/<slug>/episode-<n>/` links; episode pages embed the playable
+  manifest in an indexable `<source>` element and in the JSON-LD `contentUrl`.
+- **CosXplay** — a WordPress tube: listings are `.video-block` cards, search
+  canonicalises to `/search/<q>/page/<n>/`, tag listings use `/tag/<id>-<slug>`.
+  Detail pages carry a JSON-LD `@graph` whose `VideoObject` holds a direct MP4
+  `contentUrl`, an `/embed/<id>` page and an ISO-8601 duration.
 
 When a site is blocked, unreachable, or changes markup, `getStream` returns a
 `type: "webview"` entry pointing at the original page rather than inventing a
 URL.
+
+## Site limitations
+
+- **Pornhub** — listing/search data comes from the webmasters JSON API (the HTML
+  grid is JS-rendered) and is rate limited. The `og:video` MP4 is signed and
+  short lived, so `getStream` refetches the detail page on every call; the embed
+  page is offered as a secondary webview entry.
+- **Hanime** — playback requires a short-lived signed handshake
+  (`/api/v11/handshake`) gated behind a browser challenge, so no direct stream
+  can be resolved headlessly. `getStream` returns a single **webview** entry
+  pointing at the original page. Search results all arrive in one request (the
+  full index), then are filtered and paginated locally.
+- **HentaiHeaven** — the literal `hentaiheaven.com` domain is a parked ad page
+  and `hentaihaven.org` is unavailable, so the provider targets the live
+  `hentaihaven.xxx`. Episode pages resolve the HLS manifest; plain series landing
+  pages have no embedded manifest and fall back to a webview entry.
+- **CosXplay** — search canonicalises `/?s=<q>` to `/search/<q>/`; the
+  `/category/<slug>/` route sometimes returns a binary image response through
+  the provider HTTP layer, so the catalog uses tag listings instead.
 
 ## Legal / content notice
 

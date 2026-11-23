@@ -25,5 +25,41 @@
     "type": "global",
     "hasSettings": true,
     "disabled": false
+  },
+  {
+    "display_name": "Pornhub",
+    "value": "pornhub",
+    "version": "1.0.0",
+    "icon": "",
+    "type": "global",
+    "hasSettings": true,
+    "disabled": false
+  },
+  {
+    "display_name": "Hanime",
+    "value": "hanime",
+    "version": "1.0.0",
+    "icon": "",
+    "type": "global",
+    "hasSettings": true,
+    "disabled": false
+  },
+  {
+    "display_name": "HentaiHeaven",
+    "value": "hentaiheaven",
+    "version": "1.0.0",
+    "icon": "",
+    "type": "global",
+    "hasSettings": true,
+    "disabled": false
+  },
+  {
+    "display_name": "CosXplay",
+    "value": "cosxplay",
+    "version": "1.0.0",
+    "icon": "",
+    "type": "global",
+    "hasSettings": true,
+    "disabled": false
   }
 ]
