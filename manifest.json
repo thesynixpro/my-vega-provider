@@ -1,17 +1,26 @@
 [
   {
-    "display_name": "EXAMPLE",
-    "value": "example",
-    "version": "1.0",
+    "display_name": "XNXX",
+    "value": "xnxx",
+    "version": "1.0.0",
     "icon": "",
     "type": "global",
     "hasSettings": true,
     "disabled": false
   },
   {
-    "display_name": "xHamster",
-    "value": "xhamster",
-    "version": "1.0",
+    "display_name": "XVideos",
+    "value": "xvideos",
+    "version": "1.0.0",
+    "icon": "",
+    "type": "global",
+    "hasSettings": true,
+    "disabled": false
+  },
+  {
+    "display_name": "Eporner",
+    "value": "eporner",
+    "version": "1.0.0",
     "icon": "",
     "type": "global",
     "hasSettings": true,
