@@ -1,5 +1,5 @@
 // @vega-provider pornhub
-// @vega-version 1.0.0
+// @vega-version 1.0.1
 "use strict";
 var DEFAULT_BASE_URL = "https://www.pornhub.com";
 
@@ -188,21 +188,61 @@ function durationLabel(seconds) {
 //
 // Helpers below are inlined from providers/pornhub/common.ts at build time.
 
-function parseListing(payload) {
-  var videos = payload && Array.isArray(payload.videos) ? payload.videos : [];
+function parseListing(payload, baseUrl) {
+  baseUrl = baseUrl || DEFAULT_BASE_URL;
+  var videos = [];
+  if (Array.isArray(payload)) videos = payload;
+  else if (payload && Array.isArray(payload.videos)) videos = payload.videos;
+  else if (payload && payload.data && Array.isArray(payload.data.videos)) videos = payload.data.videos;
+  else if (payload && payload.response && Array.isArray(payload.response.videos)) videos = payload.response.videos;
+  else if (payload && payload.data && Array.isArray(payload.data)) videos = payload.data;
+
   var posts = [];
   for (var i = 0; i < videos.length; i++) {
     var video = videos[i];
     if (!video) continue;
-    var title = decodeEntities(normalizeTitle(video.title));
-    var link = normalizeTitle(video.url);
-    if (!title || !link) continue;
-    var thumb = normalizeTitle(video.default_thumb) || normalizeTitle(video.thumb);
-    var post = { title: title, link: link, image: thumb ? decodeEntities(thumb) : "" };
-    var label = durationLabel(parseDurationSeconds(video.duration));
+    var title = decodeEntities(normalizeTitle(video.title || video.video_title || video.name || video.alt));
+    var rawLink = normalizeTitle(video.url || video.video_url || video.link || video.videoUrl ||
+      (video.viewkey ? "/view_video.php?viewkey=" + video.viewkey : ""));
+    if (!title || !rawLink) continue;
+    var link = /^https?:\/\//i.test(rawLink) ? rawLink :
+      rawLink.indexOf("//") === 0 ? "https:" + rawLink :
+      baseUrl + (rawLink.charAt(0) === "/" ? rawLink : "/" + rawLink);
+    var thumb = normalizeTitle(video.default_thumb || video.thumb || video.thumbnail || video.image || video.preview);
+    var image = thumb ? (/^https?:\/\//i.test(thumb) ? thumb :
+      thumb.indexOf("//") === 0 ? "https:" + thumb :
+      baseUrl + (thumb.charAt(0) === "/" ? thumb : "/" + thumb)) : "";
+    var post = { title: title, link: link, image: image };
+    var label = durationLabel(parseDurationSeconds(video.duration || video.length || video.video_duration));
     if (label) post.tag = label;
     posts.push(post);
   }
+  return dedupePosts(posts);
+}
+
+function parseHtmlListing($, baseUrl) {
+  var posts = [];
+  var anchors = $('a[href*="/view_video.php?viewkey="], a[href*="/video?viewkey="]');
+  anchors.each(function () {
+    var anchor = $(this);
+    var href = normalizeTitle(anchor.attr("href"));
+    if (!href) return;
+    var card = anchor.closest("li, .pcVideoListItem, .videoBox, .thumbnail, .wrap");
+    var scope = card && card.length ? card : anchor;
+    var img = scope.find("img").first();
+    var title = decodeEntities(normalizeTitle(anchor.attr("title") || img.attr("alt") ||
+      scope.find("[title]").first().attr("title") || anchor.text()));
+    if (!title) return;
+    var rawImage = normalizeTitle(img.attr("data-src") || img.attr("data-thumb_url") || img.attr("src"));
+    var link = /^https?:\/\//i.test(href) ? href : baseUrl + (href.charAt(0) === "/" ? href : "/" + href);
+    var image = rawImage ? (/^https?:\/\//i.test(rawImage) ? rawImage :
+      rawImage.indexOf("//") === 0 ? "https:" + rawImage :
+      baseUrl + (rawImage.charAt(0) === "/" ? rawImage : "/" + rawImage)) : "";
+    var post = { title: title, link: link, image: image };
+    var duration = normalizeTitle(scope.find(".duration, .videoDuration, [class*='duration']").first().text());
+    if (duration) post.tag = duration;
+    posts.push(post);
+  });
   return dedupePosts(posts);
 }
 
@@ -240,13 +280,25 @@ var getPosts = async function ({ filter, page, providerValue, signal, providerCo
   appendFilter(filter, params);
 
   var url = context.baseUrl + "/webmasters/search?" + params.join("&");
-  var payload = await requestJson(providerContext, url, {
+  try {
+    var payload = await requestJson(providerContext, url, {
+      timeoutMs: context.timeoutMs,
+      retries: context.retries,
+      signal: signal,
+      headers: JSON_HEADERS,
+    });
+    var parsed = parseListing(payload, context.baseUrl);
+    if (parsed.length) return parsed;
+  } catch (error) {
+    // Continue with the public HTML listing when the JSON endpoint is blocked.
+  }
+  var html = await requestHtml(providerContext, context.baseUrl + "/video", {
     timeoutMs: context.timeoutMs,
     retries: context.retries,
     signal: signal,
-    headers: JSON_HEADERS,
+    headers: HTML_HEADERS,
   });
-  return parseListing(payload);
+  return parseHtmlListing(providerContext.cheerio.load(html), context.baseUrl);
 };
 
 var getSearchPosts = async function ({ searchQuery, page, providerValue, signal, providerContext }) {
@@ -261,13 +313,27 @@ var getSearchPosts = async function ({ searchQuery, page, providerValue, signal,
   ];
 
   var url = context.baseUrl + "/webmasters/search?" + params.join("&");
-  var payload = await requestJson(providerContext, url, {
+  try {
+    var payload = await requestJson(providerContext, url, {
+      timeoutMs: context.timeoutMs,
+      retries: context.retries,
+      signal: signal,
+      headers: JSON_HEADERS,
+    });
+    var parsed = parseListing(payload, context.baseUrl);
+    if (parsed.length) return parsed;
+  } catch (error) {
+    // Continue with the public HTML search when the JSON endpoint is blocked.
+  }
+  var htmlUrl = context.baseUrl + "/video/search?search=" +
+    encodeURIComponent(query).replace(/%20/g, "+");
+  var html = await requestHtml(providerContext, htmlUrl, {
     timeoutMs: context.timeoutMs,
     retries: context.retries,
     signal: signal,
-    headers: JSON_HEADERS,
+    headers: HTML_HEADERS,
   });
-  return parseListing(payload);
+  return parseHtmlListing(providerContext.cheerio.load(html), context.baseUrl);
 };
 
 exports.parseListing = parseListing;

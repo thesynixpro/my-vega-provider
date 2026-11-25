@@ -1,5 +1,5 @@
 // @vega-provider cosxplay
-// @vega-version 1.0.0
+// @vega-version 1.0.1
 "use strict";
 var DEFAULT_BASE_URL = "https://cosxplay.com";
 
@@ -156,6 +156,7 @@ function collectCandidates(html) {
   var push = function (value, type) {
     var clean = normalizeTitle(decodeEntities(value));
     if (!clean || !/^https?:\/\//i.test(clean)) return;
+    if (/(?:trailer|preview|teaser|hover)/i.test(clean)) return;
     if (seen[clean]) return;
     seen[clean] = true;
     candidates.push({
@@ -189,16 +190,12 @@ function collectCandidates(html) {
     }
   }
 
-  // data-trailer-url is a hover preview, not the main video; only used as a
-  // last-but-one resort so an explicit contentUrl always wins.
-  var trailer = html.match(/data-trailer-url="([^"]+\.mp4[^"]*)"/i);
-  if (trailer) push(trailer[1], "mp4");
-
-  // Any inline MP4 (excluding the low-res trailer CDN).
+  // Ignore hover trailer / preview URLs: these are often only five seconds.
   var mp4Pattern = /https?:\\?\/\\?\/[^"'\s\\]+\.mp4[^"'\s\\]*/gi;
   var match = mp4Pattern.exec(html);
   while (match) {
-    push(match[0].replace(/\\\//g, "/"), "mp4");
+    var candidate = match[0].replace(/\\\//g, "/");
+    if (!/(?:trailer|preview|teaser|thumb|hover)/i.test(candidate)) push(candidate, "mp4");
     match = mp4Pattern.exec(html);
   }
 
@@ -238,6 +235,18 @@ var getStream = async function ({ link, type, signal, providerContext, isDownloa
   var candidates = collectCandidates(html);
   var streams = [];
   var seenLinks = {};
+  var embed = embedUrl(html);
+
+  // Prefer the site's own player because page metadata may expose only a
+  // short preview clip instead of the complete video.
+  if (embed && !isDownload) {
+    streams.push({
+      server: BRAND + "-Embed",
+      link: embed,
+      type: "webview",
+      tag: "Full video player",
+    });
+  }
 
   for (var i = 0; i < candidates.length; i++) {
     var candidate = candidates[i];
@@ -263,11 +272,6 @@ var getStream = async function ({ link, type, signal, providerContext, isDownloa
     if (isDownload) return aq - bq;
     return bq - aq;
   });
-
-  var embed = embedUrl(html);
-  if (embed && !isDownload) {
-    streams.push({ server: BRAND + "-Embed", link: embed, type: "webview", tag: "Embed" });
-  }
 
   if (!streams.length) {
     return [

@@ -2,6 +2,7 @@ import { Post, ProviderContext } from "../types";
 import {
   DEFAULT_RETRIES,
   DEFAULT_TIMEOUT_SECS,
+  HTML_HEADERS,
   JSON_HEADERS,
   clampPage,
   decodeEntities,
@@ -10,6 +11,7 @@ import {
   normalizeTitle,
   parseDurationSeconds,
   readNumberSetting,
+  requestHtml,
   requestJson,
   resolveBaseUrl,
 } from "./common";
@@ -33,22 +35,87 @@ interface ListingContext {
   retries: number;
 }
 
-export function parseListing(payload: any): Post[] {
-  const videos = payload && Array.isArray(payload.videos) ? payload.videos : [];
+export function parseListing(payload: any, baseUrl: string = "https://www.pornhub.com"): Post[] {
+  // The endpoint has returned both { videos: [...] } and wrapped/nested
+  // payloads across site revisions. Accept arrays and the common wrappers.
+  let videos: any[] = [];
+  if (Array.isArray(payload)) {
+    videos = payload;
+  } else if (payload && Array.isArray(payload.videos)) {
+    videos = payload.videos;
+  } else if (payload && payload.data && Array.isArray(payload.data.videos)) {
+    videos = payload.data.videos;
+  } else if (payload && payload.response && Array.isArray(payload.response.videos)) {
+    videos = payload.response.videos;
+  } else if (payload && payload.data && Array.isArray(payload.data)) {
+    videos = payload.data;
+  }
+
   const posts: Post[] = [];
   for (let i = 0; i < videos.length; i++) {
     const video = videos[i];
     if (!video) continue;
-    const title = decodeEntities(normalizeTitle(video.title));
-    const link = normalizeTitle(video.url);
-    if (!title || !link) continue;
-    const thumb =
-      normalizeTitle(video.default_thumb) || normalizeTitle(video.thumb);
-    const post: Post = { title, link, image: thumb ? decodeEntities(thumb) : "" };
-    const label = durationLabel(parseDurationSeconds(video.duration));
+    const title = decodeEntities(normalizeTitle(
+      video.title || video.video_title || video.name || video.alt,
+    ));
+    const rawLink = normalizeTitle(
+      video.url || video.video_url || video.link || video.videoUrl ||
+      (video.viewkey ? "/view_video.php?viewkey=" + video.viewkey : ""),
+    );
+    if (!title || !rawLink) continue;
+
+    const link = /^https?:\/\//i.test(rawLink)
+      ? rawLink
+      : rawLink.indexOf("//") === 0
+        ? "https:" + rawLink
+        : baseUrl + (rawLink.charAt(0) === "/" ? rawLink : "/" + rawLink);
+    const thumb = normalizeTitle(
+      video.default_thumb || video.thumb || video.thumbnail ||
+      video.image || video.preview,
+    );
+    const post: Post = {
+      title,
+      link,
+      image: thumb
+        ? (/^https?:\/\//i.test(thumb) ? thumb : thumb.indexOf("//") === 0 ? "https:" + thumb : baseUrl + (thumb.charAt(0) === "/" ? thumb : "/" + thumb))
+        : "",
+    };
+    const label = durationLabel(parseDurationSeconds(
+      video.duration || video.length || video.video_duration,
+    ));
     if (label) post.tag = label;
     posts.push(post);
   }
+  return dedupePosts(posts);
+}
+
+// HTML fallback for regions / sessions where the JSON endpoint is blocked or
+// returns an empty payload. Parse only ordinary video-card links, not adverts.
+export function parseHtmlListing($: any, baseUrl: string): Post[] {
+  const posts: Post[] = [];
+  const anchors = $('a[href*="/view_video.php?viewkey="], a[href*="/video?viewkey="]');
+  anchors.each(function (this: any) {
+    const anchor = $(this);
+    const href = normalizeTitle(anchor.attr("href"));
+    if (!href) return;
+    const card = anchor.closest("li, .pcVideoListItem, .videoBox, .thumbnail, .wrap");
+    const scope = card && card.length ? card : anchor;
+    const image = scope.find("img").first();
+    const title = decodeEntities(normalizeTitle(
+      anchor.attr("title") || image.attr("alt") || scope.find("[title]").first().attr("title") || anchor.text(),
+    ));
+    if (!title) return;
+    const rawImage = normalizeTitle(image.attr("data-src") || image.attr("data-thumb_url") || image.attr("src"));
+    const link = /^https?:\/\//i.test(href) ? href : baseUrl + (href.charAt(0) === "/" ? href : "/" + href);
+    const post: Post = {
+      title,
+      link,
+      image: rawImage ? (/^https?:\/\//i.test(rawImage) ? rawImage : rawImage.indexOf("//") === 0 ? "https:" + rawImage : baseUrl + (rawImage.charAt(0) === "/" ? rawImage : "/" + rawImage)) : "",
+    };
+    const duration = normalizeTitle(scope.find(".duration, .videoDuration, [class*='duration']").first().text());
+    if (duration) post.tag = duration;
+    posts.push(post);
+  });
   return dedupePosts(posts);
 }
 
@@ -106,13 +173,27 @@ export const getPosts = async function ({
   appendFilter(filter, params);
 
   const url = baseUrl + "/webmasters/search?" + params.join("&");
-  const payload = await requestJson(providerContext, url, {
+  try {
+    const payload = await requestJson(providerContext, url, {
+      timeoutMs,
+      retries,
+      signal,
+      headers: JSON_HEADERS,
+    });
+    const parsed = parseListing(payload, baseUrl);
+    if (parsed.length) return parsed;
+  } catch (error) {
+    // Fall through to the public HTML page when the JSON endpoint is blocked.
+  }
+
+  const htmlUrl = baseUrl + "/video";
+  const html = await requestHtml(providerContext, htmlUrl, {
     timeoutMs,
     retries,
     signal,
-    headers: JSON_HEADERS,
+    headers: HTML_HEADERS,
   });
-  return parseListing(payload);
+  return parseHtmlListing(providerContext.cheerio.load(html), baseUrl);
 };
 
 export const getSearchPosts = async function ({
@@ -139,11 +220,26 @@ export const getSearchPosts = async function ({
   ];
 
   const url = baseUrl + "/webmasters/search?" + params.join("&");
-  const payload = await requestJson(providerContext, url, {
+  try {
+    const payload = await requestJson(providerContext, url, {
+      timeoutMs,
+      retries,
+      signal,
+      headers: JSON_HEADERS,
+    });
+    const parsed = parseListing(payload, baseUrl);
+    if (parsed.length) return parsed;
+  } catch (error) {
+    // Fall through to HTML search below.
+  }
+
+  const htmlUrl = baseUrl + "/video/search?search=" +
+    encodeURIComponent(query).replace(/%20/g, "+");
+  const html = await requestHtml(providerContext, htmlUrl, {
     timeoutMs,
     retries,
     signal,
-    headers: JSON_HEADERS,
+    headers: HTML_HEADERS,
   });
-  return parseListing(payload);
+  return parseHtmlListing(providerContext.cheerio.load(html), baseUrl);
 };

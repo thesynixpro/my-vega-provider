@@ -39,6 +39,7 @@ export function collectCandidates(html: string): Candidate[] {
   const push = function (value: unknown, type: string): void {
     const clean = normalizeTitle(decodeEntities(value));
     if (!clean || !/^https?:\/\//i.test(clean)) return;
+    if (/(?:trailer|preview|teaser|hover)/i.test(clean)) return;
     if (seen[clean]) return;
     seen[clean] = true;
     candidates.push({
@@ -72,16 +73,15 @@ export function collectCandidates(html: string): Candidate[] {
     }
   }
 
-  // data-trailer-url is a hover preview, not the main video; only used as a
-  // last-but-one resort so an explicit contentUrl always wins.
-  const trailer = html.match(/data-trailer-url="([^"]+\.mp4[^"]*)"/i);
-  if (trailer) push(trailer[1], "mp4");
-
-  // Any inline MP4 (excluding the low-res trailer CDN).
+  // Do not treat hover trailers / preview clips as the actual movie.
+  // They are commonly only a few seconds long and are exposed in card markup.
   const mp4Pattern = /https?:\\?\/\\?\/[^"'\s\\]+\.mp4[^"'\s\\]*/gi;
   let match = mp4Pattern.exec(html);
   while (match) {
-    push(match[0].replace(/\\\//g, "/"), "mp4");
+    const candidate = match[0].replace(/\\\//g, "/");
+    if (!/(?:trailer|preview|teaser|thumb|hover)/i.test(candidate)) {
+      push(candidate, "mp4");
+    }
     match = mp4Pattern.exec(html);
   }
 
@@ -138,6 +138,18 @@ export const getStream = async function ({
 
   const candidates = collectCandidates(html);
   const streams: Stream[] = [];
+  const embed = embedUrl(html);
+
+  // Prefer the site's own player. A direct URL exposed in page metadata can
+  // be a short preview clip; the embed player selects the full-length source.
+  if (embed && !isDownload) {
+    streams.push({
+      server: BRAND + "-Embed",
+      link: embed,
+      type: "webview",
+      tag: "Full video player",
+    });
+  }
   const seenLinks: Record<string, boolean> = {};
 
   for (let i = 0; i < candidates.length; i++) {
@@ -164,16 +176,6 @@ export const getStream = async function ({
     if (isDownload) return aq - bq;
     return bq - aq;
   });
-
-  const embed = embedUrl(html);
-  if (embed && !isDownload) {
-    streams.push({
-      server: BRAND + "-Embed",
-      link: embed,
-      type: "webview",
-      tag: "Embed",
-    });
-  }
 
   if (!streams.length) {
     return [

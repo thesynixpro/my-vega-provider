@@ -29,7 +29,7 @@
   {
     "display_name": "Pornhub",
     "value": "pornhub",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "icon": "",
     "type": "global",
     "hasSettings": true,
@@ -56,7 +56,7 @@
   {
     "display_name": "CosXplay",
     "value": "cosxplay",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "icon": "",
     "type": "global",
     "hasSettings": true,
