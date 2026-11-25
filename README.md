@@ -170,3 +170,13 @@ This pack contains scrapers for adult websites and 18+ content. Use it only in
 jurisdictions where such content is legal and only for personal use. Respect
 each site's terms of service, robots directives and copyright. The maintainers
 do not host or redistribute any media.
+
+## Official anime providers added
+
+- **Muse Asia** — official YouTube uploads; English subtitles and selected English dubs.
+- **Muse India** — official YouTube uploads; Hindi-dubbed and subtitled editions where published.
+- **Ani-One Asia** — official YouTube uploads; availability can vary by title and membership.
+- **Ani-One India** — official YouTube uploads; Hindi-dubbed and subtitled editions where published.
+- **Crunchyroll** — official-service launcher only. It opens Crunchyroll directly; it does not scrape or bypass regional availability, login, subscription, or DRM.
+
+YouTube-backed providers read the public channel Atom feed and open videos in YouTube's official player. YouTube controls regional playback restrictions and language tracks. The channel feed exposes recent uploads; it is not a complete historical catalogue.

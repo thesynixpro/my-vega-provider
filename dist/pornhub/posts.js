@@ -1,5 +1,5 @@
 // @vega-provider pornhub
-// @vega-version 1.0.1
+// @vega-version 1.0.2
 "use strict";
 var DEFAULT_BASE_URL = "https://www.pornhub.com";
 
@@ -23,6 +23,13 @@ var JSON_HEADERS = {
   "Accept-Language": "en-US,en;q=0.9",
   Accept: "application/json, text/plain, */*",
 };
+
+async function requestHtml(providerContext, url, options = {}) {
+  const response = await providerContext.axios.get(url, { headers: options.headers || HTML_HEADERS, timeout: options.timeoutMs || DEFAULT_TIMEOUT_SECS * 1000, signal: options.signal });
+  const body = typeof response.data === "string" ? response.data : String(response.data || "");
+  if (!body || body.length < 30) throw new Error("Pornhub returned an empty HTML response");
+  return body;
+}
 
 function clampPage(page) {
   var value = Math.floor(Number(page));

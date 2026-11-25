@@ -3,7 +3,7 @@
     "display_name": "XNXX",
     "value": "xnxx",
     "version": "1.0.0",
-    "icon": "",
+    "icon": "https://www.google.com/s2/favicons?domain=xnxx.com&sz=128",
     "type": "global",
     "hasSettings": true,
     "disabled": false
@@ -12,7 +12,7 @@
     "display_name": "XVideos",
     "value": "xvideos",
     "version": "1.0.0",
-    "icon": "",
+    "icon": "https://www.google.com/s2/favicons?domain=xvideos.com&sz=128",
     "type": "global",
     "hasSettings": true,
     "disabled": false
@@ -21,7 +21,7 @@
     "display_name": "Eporner",
     "value": "eporner",
     "version": "1.0.0",
-    "icon": "",
+    "icon": "https://www.google.com/s2/favicons?domain=eporner.com&sz=128",
     "type": "global",
     "hasSettings": true,
     "disabled": false
@@ -29,8 +29,8 @@
   {
     "display_name": "Pornhub",
     "value": "pornhub",
-    "version": "1.0.1",
-    "icon": "",
+    "version": "1.0.2",
+    "icon": "https://www.google.com/s2/favicons?domain=pornhub.com&sz=128",
     "type": "global",
     "hasSettings": true,
     "disabled": false
@@ -39,7 +39,7 @@
     "display_name": "Hanime",
     "value": "hanime",
     "version": "1.0.0",
-    "icon": "",
+    "icon": "https://www.google.com/s2/favicons?domain=hanime.tv&sz=128",
     "type": "global",
     "hasSettings": true,
     "disabled": false
@@ -48,7 +48,7 @@
     "display_name": "HentaiHeaven",
     "value": "hentaiheaven",
     "version": "1.0.0",
-    "icon": "",
+    "icon": "https://www.google.com/s2/favicons?domain=hentaiheaven.com&sz=128",
     "type": "global",
     "hasSettings": true,
     "disabled": false
@@ -56,37 +56,55 @@
   {
     "display_name": "CosXplay",
     "value": "cosxplay",
-    "version": "1.0.1",
-    "icon": "",
+    "version": "1.0.2",
+    "icon": "https://www.google.com/s2/favicons?domain=cosxplay.com&sz=128",
     "type": "global",
     "hasSettings": true,
     "disabled": false
   },
   {
-    "display_name": "AnimeDubHindi",
-    "value": "animedubhindi",
+    "display_name": "Muse Asia",
+    "value": "museasia",
     "version": "1.0.0",
-    "icon": "",
+    "icon": "https://www.google.com/s2/favicons?domain=youtube.com&sz=128",
     "type": "global",
-    "hasSettings": true,
+    "hasSettings": false,
     "disabled": false
   },
   {
-    "display_name": "AnimeHindiDub",
-    "value": "animehindidub",
+    "display_name": "Muse India",
+    "value": "museindia",
     "version": "1.0.0",
-    "icon": "",
+    "icon": "https://www.google.com/s2/favicons?domain=youtube.com&sz=128",
     "type": "global",
-    "hasSettings": true,
+    "hasSettings": false,
     "disabled": false
   },
   {
-    "display_name": "DesiDubAnime",
-    "value": "desidubanime",
+    "display_name": "Ani-One Asia",
+    "value": "anioneasia",
     "version": "1.0.0",
-    "icon": "",
+    "icon": "https://www.google.com/s2/favicons?domain=youtube.com&sz=128",
     "type": "global",
-    "hasSettings": true,
+    "hasSettings": false,
+    "disabled": false
+  },
+  {
+    "display_name": "Ani-One India",
+    "value": "anioneindia",
+    "version": "1.0.0",
+    "icon": "https://www.google.com/s2/favicons?domain=youtube.com&sz=128",
+    "type": "global",
+    "hasSettings": false,
+    "disabled": false
+  },
+  {
+    "display_name": "Crunchyroll",
+    "value": "crunchyroll",
+    "version": "1.0.0",
+    "icon": "https://www.google.com/s2/favicons?domain=crunchyroll.com&sz=128",
+    "type": "global",
+    "hasSettings": false,
     "disabled": false
   }
 ]

@@ -1,5 +1,5 @@
 // @vega-provider pornhub
-// @vega-version 1.0.1
+// @vega-version 1.0.2
 "use strict";
 var DEFAULT_BASE_URL = "https://www.pornhub.com";
 

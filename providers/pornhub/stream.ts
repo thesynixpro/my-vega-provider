@@ -10,7 +10,6 @@ import {
   normalizeTitle,
   readBoolSetting,
   readNumberSetting,
-  requestHtml,
   resolveBaseUrl,
 } from "./common";
 
@@ -27,6 +26,17 @@ interface Candidate {
   link: string;
   type: string;
   height: number;
+}
+
+async function requestHtml(providerContext: ProviderContext, url: string, options: any = {}): Promise<string> {
+  const response = await providerContext.axios.get(url, {
+    headers: options.headers || HTML_HEADERS,
+    timeout: options.timeoutMs || DEFAULT_TIMEOUT_SECS * 1000,
+    signal: options.signal,
+  });
+  const body = typeof response.data === "string" ? response.data : String(response.data || "");
+  if (!body || body.length < 30) throw new Error("Pornhub returned an empty HTML response");
+  return body;
 }
 
 function scoreHeightFromUrl(url: string): number {

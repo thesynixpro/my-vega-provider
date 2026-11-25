@@ -1,5 +1,5 @@
 // @vega-provider cosxplay
-// @vega-version 1.0.1
+// @vega-version 1.0.2
 "use strict";
 var DEFAULT_BASE_URL = "https://cosxplay.com";
 
