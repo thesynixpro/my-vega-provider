@@ -29,7 +29,7 @@
   {
     "display_name": "Pornhub",
     "value": "pornhub",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "icon": "https://www.google.com/s2/favicons?domain=pornhub.com&sz=128",
     "type": "global",
     "hasSettings": true,
@@ -103,6 +103,24 @@
     "value": "crunchyroll",
     "version": "1.0.0",
     "icon": "https://www.google.com/s2/favicons?domain=crunchyroll.com&sz=128",
+    "type": "global",
+    "hasSettings": false,
+    "disabled": false
+  },
+  {
+    "display_name": "CineFreak",
+    "value": "cinefreak",
+    "version": "1.0.0",
+    "icon": "https://www.google.com/s2/favicons?domain=cinefreak.net&sz=128",
+    "type": "global",
+    "hasSettings": false,
+    "disabled": false
+  },
+  {
+    "display_name": "ToonStream",
+    "value": "toonstream",
+    "version": "1.0.0",
+    "icon": "https://www.google.com/s2/favicons?domain=toonstream.us&sz=128",
     "type": "global",
     "hasSettings": false,
     "disabled": false

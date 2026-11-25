@@ -180,3 +180,14 @@ do not host or redistribute any media.
 - **Crunchyroll** — official-service launcher only. It opens Crunchyroll directly; it does not scrape or bypass regional availability, login, subscription, or DRM.
 
 YouTube-backed providers read the public channel Atom feed and open videos in YouTube's official player. YouTube controls regional playback restrictions and language tracks. The channel feed exposes recent uploads; it is not a complete historical catalogue.
+
+## Additional website launchers
+
+- **CineFreak** (`cinefreak`): opens `https://cinefreak.net/` in Vega's WebView.
+- **ToonStream** (`toonstream`): opens `https://toonstream.us/home` in Vega's WebView.
+
+These two entries are website launchers only. They do not scrape third-party file hosts, extract protected media URLs, or bypass access controls.
+
+## Pornhub listing diagnostics
+
+Pornhub listing parsing accepts several common JSON response wrappers and alternate video fields, deduplicates canonical video pages, and has a broader HTML card parser. If a normal request returns no cards, it can offer an interactive Vega WebView fallback for user-completed verification. It does not solve or bypass verification challenges automatically. Listing failures now include the stage-specific request reason instead of silently returning an empty array.
